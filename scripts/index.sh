@@ -9,6 +9,5 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd ${SCRIPT_DIR}/.. && sudo docker compose up -d
 
-# Configure kibana
+"${SCRIPT_DIR}/es-setup.sh" || echo "ES setup failed"
 "${SCRIPT_DIR}/kibana-setup.sh" || echo "Kibana configuration failed"
-
