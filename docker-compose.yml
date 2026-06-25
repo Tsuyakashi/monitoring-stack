@@ -17,7 +17,7 @@ services:
       - logging-network
     restart: unless-stopped
     depends_on:
-      python-app
+      - python-app
       
   python-app:
     image: tsuyakashi/poly-ci:python-latest
