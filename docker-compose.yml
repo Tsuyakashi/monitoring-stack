@@ -72,7 +72,6 @@ services:
       - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
     volumes:
       - ./monitoring/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
-      - ./monitoring/logstash-template.json:/usr/share/logstash/templates/logstash-template.json:ro
     deploy:
       resources:
         limits:

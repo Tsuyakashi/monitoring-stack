@@ -5,7 +5,19 @@ filebeat.inputs:
       - /var/lib/docker/containers/*/*.log
 
 processors:
-  - add_docker_metadata: ~
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+  - drop_event:
+      when:
+        or:
+          - equals:
+              container.name: "elasticsearch"
+          - equals:
+              container.name: "logstash"
+          - equals:
+              container.name: "kibana"
+          - equals:
+              container.name: "filebeat"
 
 output.logstash:
   hosts: ["logstash:5044"]
