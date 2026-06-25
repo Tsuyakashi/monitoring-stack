@@ -38,4 +38,4 @@ curl -sf -X PUT "${ES_URL}/_index_template/poly-ci-logs" \
         }
       }
     }
-  }' &>dev/null && echo "[es] Template applied." || echo "[es] Template apply failed."
+  }' &>/dev/null && echo "[es] Template applied." || echo "[es] Template apply failed."
