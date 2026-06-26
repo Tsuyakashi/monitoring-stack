@@ -2,3 +2,4 @@ docker_volumes/
 host_metrics_app/host_metrics_app.log
 *.log
 venv
+.env

@@ -8,8 +8,8 @@ services:
     environment:
       ES_JAVA_OPTS: "-Xmx512m -Xms512m"
       ELASTIC_USERNAME: "elastic"
-      ELASTIC_PASSWORD: "MyPw123"
-      KIBANA_SYSTEM_PASSWORD: "KibanaSecurePassword123"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD}
       discovery.type: single-node
     networks:
       - elk
@@ -31,6 +31,7 @@ services:
       - ./configs/logstash/pipelines:/usr/share/logstash/config/pipelines:ro
     environment:
       LS_JAVA_OPTS: "-Xmx512m -Xms512m"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
     ports:
       - "5044:5044"
       - "5000:5000"
@@ -50,6 +51,8 @@ services:
     image: kibana:8.11.1
     volumes:
       - ./configs/kibana/config.yml:/usr/share/kibana/config/kibana.yml:ro
+    environment:
+      ELASTICSEARCH_PASSWORD: ${KIBANA_SYSTEM_PASSWORD}
     networks:
       - elk
     ports:
