@@ -12,12 +12,13 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/http.conf:/etc/nginx/conf.d/http_params.conf:ro
     networks:
       - web-network
       - logging-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -38,7 +39,7 @@ services:
       - web-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -74,7 +75,7 @@ services:
     environment:
       - strict.perms=false
     healthcheck:
-      test: ["CMD-SHELL", "filebeat test output || exit 1"]
+      test: ["CMD-SHELL", "pgrep -x filebeat > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -118,6 +119,7 @@ services:
     environment:
       - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+      - XPACK_MONITORING_ENABLED=false 
     volumes:
       - ./monitoring/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
     deploy:
@@ -133,11 +135,11 @@ services:
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -s localhost:9600 | grep -q logstash_version || exit 1"]
+      test: ["CMD-SHELL", "curl -s localhost:9600 | grep -q '\"status\":\"green\"' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 90s
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.19.17
