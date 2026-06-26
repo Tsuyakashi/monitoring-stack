@@ -16,9 +16,6 @@ services:
       - web-network
       - logging-network
     restart: unless-stopped
-    depends_on:
-      python-app:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
@@ -79,6 +76,12 @@ services:
           memory: 128m
     environment:
       - strict.perms=false
+    healthcheck:
+      test: ["CMD-SHELL", "filebeat test output || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.19.17
@@ -91,8 +94,8 @@ services:
       - xpack.security.enrollment.enabled=true
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - cluster.routing.allocation.disk.watermark.low=85%
-      - cluster.routing.allocation.disk.watermark.high=90%
+      - cluster.routing.allocation.disk.watermark.low=75%
+      - cluster.routing.allocation.disk.watermark.high=85%
       - cluster.routing.allocation.disk.watermark.flood_stage=95%
     volumes:
       - es-data:/usr/share/elasticsearch/data
