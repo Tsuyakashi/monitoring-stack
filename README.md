@@ -17,9 +17,9 @@ sudo chown -R 1000:1000 ./docker_volumes/elasticsearch/data
 
 usage:
 ```bash
-python3 -m venv venv && source venv/bin/activate && pip install psutil
-
 docker compose up -d
+
+python3 -m venv venv && source venv/bin/activate && pip install psutil
 
 python3 ./host_metrics_app/main.py
 ```

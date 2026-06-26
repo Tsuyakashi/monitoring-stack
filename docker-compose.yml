@@ -1,24 +1,30 @@
-version: '3.7'
-
 services:
   elasticsearch:
-    image: elasticsearch:7.16.1
+    image: elasticsearch:8.11.1
     volumes:
       - ./configs/elasticsearch/config.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
-      - ./docker_volumes/elasticsearch/data:/usr/share/elasticsearch/data
+      - es_data:/usr/share/elasticsearch/data
+      - ./scripts/es-setup.sh:/es-setup.sh:ro
     environment:
       ES_JAVA_OPTS: "-Xmx512m -Xms512m"
       ELASTIC_USERNAME: "elastic"
       ELASTIC_PASSWORD: "MyPw123"
+      KIBANA_SYSTEM_PASSWORD: "KibanaSecurePassword123"
       discovery.type: single-node
     networks:
       - elk
     ports:
       - "9200:9200"
       - "9300:9300"
+    entrypoint: ["/bin/bash", "/es-setup.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:$$ELASTIC_PASSWORD http://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   logstash:
-    image: logstash:7.16.2
+    image: logstash:8.11.1
     volumes:
       - ./configs/logstash/config.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./configs/logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
@@ -32,23 +38,33 @@ services:
     networks:
       - elk
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9600/_node/stats | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   kibana:
-    image: kibana:7.16.1
-    depends_on:
-      - elasticsearch
+    image: kibana:8.11.1
     volumes:
       - ./configs/kibana/config.yml:/usr/share/kibana/config/kibana.yml:ro
     networks:
       - elk
     ports:
       - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q '\"level\":\"available\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
-# demonstation; runs with prod apps
   beats:
-    image: elastic/filebeat:7.16.2
-    # Добавляем принудительное отключение строгой проверки прав:
+    image: elastic/filebeat:8.11.1
     command: ["--strict.perms=false"]
     volumes:
       - ./configs/filebeat/config.yml:/usr/share/filebeat/filebeat.yml:ro
@@ -56,8 +72,21 @@ services:
     networks:
       - elk
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5066/ | grep -q '\"beat\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
 
 networks:
   elk:
     driver: bridge
+
+volumes:
+  es_data:
+    driver: local
