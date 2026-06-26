@@ -17,7 +17,20 @@ services:
       - logging-network
     restart: unless-stopped
     depends_on:
-      - python-app
+      python-app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/python/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+        reservations:
+          memory: 128m
       
   python-app:
     image: tsuyakashi/poly-ci:python-latest
@@ -27,6 +40,18 @@ services:
     networks:
       - web-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.19.17
@@ -41,7 +66,16 @@ services:
       - logging-network
     restart: unless-stopped
     depends_on:
-      - logstash
+      logstash:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+        reservations:
+          memory: 128m
+    environment:
+      - strict.perms=false
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.19.17
@@ -50,7 +84,9 @@ services:
       - "9200:9200"
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - xpack.security.enrollment.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - cluster.routing.allocation.disk.watermark.low=85%
       - cluster.routing.allocation.disk.watermark.high=90%
@@ -61,26 +97,44 @@ services:
       resources:
         limits:
           memory: 1g
+        reservations:
+          memory: 512m
     networks:
       - logging-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 -u elastic:${ELASTIC_PASSWORD:-changeme} | grep -q cluster_name || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.19.17
     container_name: logstash
     environment:
       - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
     volumes:
       - ./monitoring/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
     deploy:
       resources:
         limits:
           memory: 512m
+        reservations:
+          memory: 256m
     networks:
       - logging-network
     restart: unless-stopped
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s localhost:9600 | grep -q logstash_version || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.19.17
@@ -90,11 +144,27 @@ services:
     environment:
       - SERVER_BASEPATH=/kibana
       - SERVER_REWRITEBASEPATH=true
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-changeme}
     networks:
       - logging-network
     restart: unless-stopped
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/kibana/api/status | grep -q kbn_name || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 volumes:
   es-data:
