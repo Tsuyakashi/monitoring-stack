@@ -20,7 +20,7 @@ services:
       python-app:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/python/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -64,10 +64,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - logging-network
-    restart: unless-stopped
+    restart: on-failure
+    restart_policy:
+      max_attempts: 5
+      delay: 5s
     depends_on:
       logstash:
-        condition: service_started
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -101,7 +104,10 @@ services:
           memory: 512m
     networks:
       - logging-network
-    restart: unless-stopped
+    restart: on-failure
+    restart_policy:
+      max_attempts: 5
+      delay: 5s
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200 -u elastic:${ELASTIC_PASSWORD:-changeme} | grep -q cluster_name || exit 1"]
       interval: 30s
@@ -125,7 +131,10 @@ services:
           memory: 256m
     networks:
       - logging-network
-    restart: unless-stopped
+    restart: on-failure
+    restart_policy:
+      max_attempts: 5
+      delay: 5s
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -149,7 +158,10 @@ services:
       - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-changeme}
     networks:
       - logging-network
-    restart: unless-stopped
+    restart: on-failure
+    restart_policy:
+      max_attempts: 5
+      delay: 5s
     depends_on:
       elasticsearch:
         condition: service_healthy
