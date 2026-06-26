@@ -1,0 +1,49 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Elasticsearch data volumes
+es-data/
+
+# Docker volumes
+volumes/
+dead_letter_queue/
+
+# Logs
+*.log
+*.log.*
+logs/
+docker-logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Application specific
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Generated files
+.coverage
+htmlcov/
+
+# Backups
+backups/
+*.backup
+*.tar.gz
+dumps/
